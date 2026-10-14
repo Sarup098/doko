@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>DOKO | Admin Terminal</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700;900&family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        display: ['Space Grotesk', 'sans-serif'],
+                    },
+                    colors: {
+                        doko: {
+                            cyan: '#00FFFF',
+                            magenta: '#FF00FF',
+                            yellow: '#FFEA00',
+                            black: '#111111',
+                            green: '#a3e635', 
+                            bg: '#FDF8E7'
+                        }
+                    },
+                    boxShadow: {
+                        'brutal': '4px 4px 0px 0px #111',
+                        'brutal-lg': '8px 8px 0px 0px #111',
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        body {
+            background-color: #FDF8E7; 
+            background-image: radial-gradient(#11111122 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        .brutal-border { border: 2px solid #111; }
+        .brutal-card {
+            background: white;
+            border: 2px solid #111;
+            box-shadow: 4px 4px 0px 0px #111;
+            border-radius: 1rem;
+        }
+        
+        .brutal-btn {
+            border: 2px solid #111;
+            box-shadow: 4px 4px 0px 0px #111;
+            transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border-radius: 0.75rem;
+        }
+        .brutal-btn:hover:not(:disabled) {
+            transform: translate(-2px, -2px);
+            box-shadow: 6px 6px 0px 0px #111;
+        }
+        .brutal-btn:active:not(:disabled) {
+            transform: translate(2px, 2px);
+            box-shadow: 2px 2px 0px 0px #111;
+        }
+
+        @keyframes bounce-alert { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+        .animate-bounce-alert { animation: bounce-alert 1s infinite; }
+    </style>
+</head>
+<body class="text-doko-black antialiased p-4 md:p-8">
+
+    <div class="max-w-7xl mx-auto space-y-8">
+        
+        <!-- Header -->
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 bg-white p-6 rounded-2xl brutal-border shadow-brutal">
+            <div>
+                <h1 class="font-display text-3xl md:text-4xl font-black uppercase tracking-tight flex items-center gap-3">
+                    <i class="ph-bold ph-storefront text-doko-magenta text-4xl"></i> Admin Terminal 💻
+                </h1>
+                <p class="font-bold text-xs mt-2 text-gray-500 uppercase tracking-widest flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-doko-green animate-pulse"></span> Live Connected to Firestore
+                </p>
+            </div>
+            <div class="flex gap-3">
+                <a href="admin_uploader.html" target="_blank" class="brutal-btn bg-doko-yellow px-4 py-2 text-xs flex items-center gap-2">
+                    <i class="ph-bold ph-upload-simple"></i> Bulk Upload
+                </a>
+            </div>
+        </div>
+
+        <!-- RAPID ALERT BANNER (Hidden by default) -->
+        <div id="admin-rapid-alert" class="hidden bg-doko-magenta text-white p-4 md:p-6 rounded-2xl flex-col md:flex-row items-center justify-between gap-4 animate-bounce-alert brutal-border shadow-brutal-lg relative z-10">
+            <div class="flex items-center gap-4 w-full md:w-auto">
+                <div class="bg-white p-3 rounded-full shrink-0"><i class="ph-bold ph-warning-circle text-3xl text-doko-magenta"></i></div>
+                <div>
+                    <h4 class="font-display text-2xl font-black uppercase tracking-tight">🚨 Rapid Alert!</h4>
+                    <p id="rapid-alert-details" class="font-bold text-white/90 text-sm"></p>
+                </div>
+            </div>
+            <div class="flex w-full md:w-auto gap-3">
+                <button onclick="acceptRapidOrder()" class="brutal-btn bg-white text-black flex-1 md:flex-none px-6 py-3 text-sm">Accept & Assign</button>
+                <button onclick="dismissRapidAlert()" class="p-3 bg-white/20 rounded-xl hover:bg-white/30 transition-colors brutal-border"><i class="ph-bold ph-x text-xl"></i></button>
+            </div>
+        </div>
+
+        <!-- STATS DASHBOARD -->
+        <div id="admin-stats" class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+            <!-- Injected via JS -->
+        </div>
+
+        <!-- STANDARD BATCHING PANEL -->
+        <div class="bg-doko-black text-white p-6 md:p-8 rounded-2xl flex flex-col md:flex-row justify-between items-center gap-6 brutal-border shadow-brutal">
+            <div class="text-center md:text-left">
+                <h3 class="font-display text-2xl font-black uppercase flex items-center justify-center md:justify-start gap-2 mb-2">
+                    <i class="ph-bold ph-clock text-doko-cyan"></i> Standard Batching
+                </h3>
+                <p class="font-bold text-gray-400 text-sm">Group pending STANDARD orders and dispatch to driver.</p>
+            </div>
+            <button onclick="generateBatch()" id="batch-btn" class="brutal-btn bg-doko-cyan text-black w-full md:w-auto py-4 px-8 text-lg hover:bg-[#00e6e6]">
+                Dispatch Batch
+            </button>
+        </div>
+
+        <!-- ORDERS TABLE/LIST -->
+        <div id="admin-orders-container" class="space-y-4 md:space-y-0">
+            <!-- Injected via JS -->
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed top-10 left-1/2 transform -translate-x-1/2 -translate-y-20 opacity-0 bg-doko-black text-white px-6 py-3 rounded-xl font-black text-sm brutal-border shadow-brutal transition-all duration-300 z-50 flex items-center gap-2 uppercase tracking-wider whitespace-nowrap">
+        <i class="ph-bold ph-info text-xl" id="toast-icon"></i>
+        <span id="toast-msg">Message</span>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-app.js";
+        import { getFirestore, collection, onSnapshot, doc, updateDoc } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
+
+        // Your Exact Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCnAX2na4izR1MHqpSofpRQxj7R3BwLX5w",
+            authDomain: "doko-d984c.firebaseapp.com",
+            projectId: "doko-d984c",
+            storageBucket: "doko-d984c.firebasestorage.app",
+            messagingSenderId: "604294295784",
+            appId: "1:604294295784:web:2dca7a5e70b4286a94d95d",
+            measurementId: "G-JD6WMCJ88D"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        let globalOrders = [];
+        let alertedRapidOrders = new Set(); // Prevent alerting for the same order twice
+        window.currentRapidOrderObj = null;
+
+        // UI Toast Function
+        window.showToast = (msg, type = 'success') => {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-msg').textContent = msg;
+            toast.className = `fixed top-10 left-1/2 transform -translate-x-1/2 translate-y-0 opacity-100 px-6 py-3 rounded-xl font-black text-sm brutal-border shadow-brutal transition-all duration-300 z-50 flex items-center gap-2 uppercase tracking-wider ${
+                type === 'success' ? 'bg-doko-green text-black' : type === 'error' ? 'bg-red-500 text-white' : 'bg-doko-magenta text-white'
+            }`;
+            document.getElementById('toast-icon').className = type === 'success' ? 'ph-bold ph-check-circle text-xl' : 'ph-bold ph-warning-circle text-xl';
+
+            setTimeout(() => { 
+                toast.style.transform = "translate(-50%, -50px)"; 
+                toast.style.opacity = "0"; 
+            }, 4000);
+        };
+
+        // Real-Time Listener for Orders
+        onSnapshot(collection(db, "orders"), (snapshot) => {
+            // Parse and sort by newest first
+            globalOrders = snapshot.docs.map(doc => ({ ...doc.data(), docId: doc.id }))
+                                .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+            
+            renderStats();
+            renderOrders();
+            checkForRapidAlerts();
+        }, (error) => {
+            console.error("Firebase Read Error:", error);
+            showToast("Database Permission Denied. Check Firestore Rules.", "error");
+        });
+
+        // 🚨 The Rapid Alert Logic
+        function checkForRapidAlerts() {
+            // Find the oldest unhandled RAPID order that was just PLACED
+            const rapidPending = globalOrders.find(o => o.deliveryMode === 'RAPID' && o.status === 'PLACED');
+            
+            if (rapidPending && !alertedRapidOrders.has(rapidPending.docId)) {
+                // New Rapid Order Found! Trigger UI & Sound
+                alertedRapidOrders.add(rapidPending.docId);
+                window.currentRapidOrderObj = rapidPending;
+                
+                document.getElementById('admin-rapid-alert').classList.remove('hidden');
+                document.getElementById('admin-rapid-alert').classList.add('flex');
+                document.getElementById('rapid-alert-details').innerText = `ID: ${rapidPending.docId.substring(0,8)} • ${rapidPending.customerName} • ₹${rapidPending.totalAmount}`;
+                
+                showToast("🚨 Incoming Rapid Order!", "magenta");
+                
+                // Play Alert Sound
+                try {
+                    const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+                    audio.play().catch(e => console.log("Audio autoplay blocked by browser until user interacts."));
+                } catch(e) {}
+            }
+        }
+
+        window.dismissRapidAlert = () => {
+            document.getElementById('admin-rapid-alert').classList.add('hidden');
+            document.getElementById('admin-rapid-alert').classList.remove('flex');
+            window.currentRapidOrderObj = null;
+        };
+
+        window.acceptRapidOrder = () => {
+            if(window.currentRapidOrderObj) {
+                // Move status to PREPARING immediately
+                window.updateOrderStatus(window.currentRapidOrderObj.docId, 'PREPARING');
+            }
+            window.dismissRapidAlert();
+        };
+
+        // Standard Delivery Batching
+        window.generateBatch = async () => {
+            const btn = document.getElementById('batch-btn');
+            btn.innerHTML = `<i class="ph-bold ph-spinner animate-spin"></i> Dispatching...`;
+            btn.disabled = true;
+
+            const pendingStd = globalOrders.filter(o => o.deliveryMode === 'STANDARD' && o.status === 'PLACED');
+            
+            if(pendingStd.length === 0) {
+                showToast("No STANDARD orders waiting to be batched.", "error");
+                btn.innerHTML = `Dispatch Batch`;
+                btn.disabled = false;
+                return;
+            }
+
+            try {
+                // Use Promise.all to update all pending standard orders at once
+                await Promise.all(pendingStd.map(order => {
+                    return updateDoc(doc(db, "orders", order.docId), {
+                        status: 'BATCHED',
+                        driverAssigned: '+918888888888' // Hardcoded driver phone for Demo
+                    });
+                }));
+                showToast(`Successfully dispatched batch of ${pendingStd.length} orders!`, "success");
+            } catch(e) {
+                console.error(e);
+                showToast("Failed to generate batch.", "error");
+            } finally {
+                btn.innerHTML = `Dispatch Batch`;
+                btn.disabled = false;
+            }
+        };
+
+        // Update Specific Order Status
+        window.updateOrderStatus = async (docId, newStatus) => {
+            try {
+                await updateDoc(doc(db, "orders", docId), { status: newStatus });
+                showToast(`Order status updated to ${newStatus.replace(/_/g, ' ')}`, "success");
+            } catch (error) {
+                console.error("Update error:", error);
+                showToast("Failed to update status", "error");
+            }
+        };
+
+        // UI Render Functions
+        function renderStats() {
+            const pendingStd = globalOrders.filter(o => o.deliveryMode === 'STANDARD' && o.status === 'PLACED').length;
+            const pendingRap = globalOrders.filter(o => o.deliveryMode === 'RAPID' && o.status === 'PLACED').length;
+            // Calculate total revenue (excluding cancelled orders)
+            const totalRev = globalOrders.filter(o => o.status !== 'CANCELLED').reduce((sum, o) => sum + (o.totalAmount || o.total || 0), 0);
+            
+            document.getElementById('admin-stats').innerHTML = `
+                <div class="bg-white p-5 md:p-6 rounded-2xl brutal-border shadow-[4px_4px_0_0_#111]">
+                    <p class="text-[10px] md:text-xs font-black uppercase tracking-widest text-gray-500 mb-1">Total Orders</p>
+                    <p class="font-display text-3xl md:text-4xl font-black">${globalOrders.length}</p>
+                </div>
+                <div class="bg-doko-cyan p-5 md:p-6 rounded-2xl brutal-border shadow-[4px_4px_0_0_#111]">
+                    <p class="text-[10px] md:text-xs font-black uppercase tracking-widest text-[#111]/70 mb-1">Std (Pending)</p>
+                    <p class="font-display text-3xl md:text-4xl font-black">${pendingStd}</p>
+                </div>
+                <div class="bg-doko-magenta text-white p-5 md:p-6 rounded-2xl brutal-border shadow-[4px_4px_0_0_#111]">
+                    <p class="text-[10px] md:text-xs font-black uppercase tracking-widest text-white/70 mb-1">Rap (Pending)</p>
+                    <p class="font-display text-3xl md:text-4xl font-black">${pendingRap}</p>
+                </div>
+                <div class="bg-doko-yellow p-5 md:p-6 rounded-2xl brutal-border shadow-[4px_4px_0_0_#111]">
+                    <p class="text-[10px] md:text-xs font-black uppercase tracking-widest text-[#111]/70 mb-1">Total Revenue</p>
+                    <p class="font-display text-3xl md:text-4xl font-black">₹${totalRev}</p>
+                </div>
+            `;
+        }
+
+        function renderOrders() {
+            const container = document.getElementById('admin-orders-container');
+            
+            if(globalOrders.length === 0) {
+                container.innerHTML = `<div class="text-center p-12 text-gray-400 font-bold uppercase tracking-widest brutal-border bg-white rounded-2xl shadow-[4px_4px_0_0_#111]">No Database Activity Yet</div>`;
+                return;
+            }
+
+            // Desktop Table View
+            let tableHTML = `
+            <div class="hidden md:block bg-white rounded-2xl brutal-border shadow-brutal overflow-hidden">
+                <table class="w-full text-left border-collapse">
+                    <thead class="bg-gray-100 text-[10px] font-black uppercase tracking-widest border-b-4 border-black">
+                        <tr>
+                            <th class="p-4">Order ID</th>
+                            <th class="p-4">Customer</th>
+                            <th class="p-4">Mode</th>
+                            <th class="p-4">Items / Total</th>
+                            <th class="p-4">Status / Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${globalOrders.map(o => {
+                            const total = o.totalAmount || o.total || 0;
+                            return `
+                            <tr class="border-b-2 border-gray-200 hover:bg-gray-50 transition-colors">
+                                <td class="p-4 font-display font-black uppercase text-sm">${o.docId.substring(0,8)}</td>
+                                <td class="p-4">
+                                    <p class="font-bold text-sm">${o.customerName || 'Guest'}</p>
+                                    <p class="text-[10px] text-gray-500">${o.customerPhone || 'N/A'}</p>
+                                    <p class="text-[10px] font-bold mt-1 text-doko-magenta">${o.address || ''}</p>
+                                </td>
+                                <td class="p-4">
+                                    <span class="px-3 py-1 rounded-md text-[9px] font-black uppercase brutal-border shadow-[2px_2px_0_0_#111] ${o.deliveryMode==='RAPID' ? 'bg-doko-magenta text-white' : 'bg-doko-cyan text-black'}">${o.deliveryMode}</span>
+                                </td>
+                                <td class="p-4">
+                                    <p class="text-[10px] text-gray-600 font-bold line-clamp-1 max-w-[150px]">${(o.items || []).map(i => `${i.qty}x ${i.name}`).join(', ')}</p>
+                                    <p class="font-black text-sm mt-1">₹${total}</p>
+                                </td>
+                                <td class="p-4">
+                                    <select class="font-black text-[10px] uppercase p-2 rounded-lg ${o.status === 'DELIVERED' ? 'bg-doko-green' : 'bg-doko-yellow'} brutal-border shadow-[2px_2px_0_0_#111] cursor-pointer outline-none focus:border-doko-magenta" onchange="updateOrderStatus('${o.docId}', this.value)">
+                                        ${['PLACED','PREPARING','BATCHED','OUT_FOR_DELIVERY','DELIVERED','CANCELLED'].map(s => `<option value="${s}" ${o.status===s?'selected':''}>${s.replace(/_/g,' ')}</option>`).join('')}
+                                    </select>
+                                </td>
+                            </tr>
+                        `}).join('')}
+                    </tbody>
+                </table>
+            </div>`;
+
+            // Mobile Cards View
+            let cardsHTML = `
+            <div class="md:hidden flex flex-col gap-4">
+                ${globalOrders.map(o => {
+                    const total = o.totalAmount || o.total || 0;
+                    return `
+                    <div class="bg-white p-4 rounded-2xl brutal-border shadow-[4px_4px_0_0_#111] flex flex-col gap-3">
+                        <div class="flex justify-between items-center border-b-2 border-gray-100 pb-2">
+                            <span class="font-display font-black uppercase text-lg">${o.docId.substring(0,8)}</span>
+                            <span class="px-2 py-1 rounded text-[9px] font-black uppercase brutal-border shadow-[2px_2px_0_0_#111] ${o.deliveryMode==='RAPID' ? 'bg-doko-magenta text-white' : 'bg-doko-cyan text-black'}">${o.deliveryMode}</span>
+                        </div>
+                        <div>
+                            <p class="font-bold text-base leading-tight flex justify-between">
+                                <span>${o.customerName || 'Guest'}</span>
+                                <span class="font-black">₹${total}</span>
+                            </p>
+                            <p class="text-xs text-gray-500 font-bold">${o.customerPhone || 'N/A'}</p>
+                            <p class="text-xs mt-1 text-doko-magenta font-bold line-clamp-1">${o.address || ''}</p>
+                        </div>
+                        <div class="flex justify-between items-center pt-2 border-t-2 border-gray-100">
+                            <span class="text-[10px] font-black uppercase tracking-widest text-gray-400">Action</span>
+                            <select class="font-black text-[10px] uppercase p-2 rounded-lg ${o.status === 'DELIVERED' ? 'bg-doko-green' : 'bg-doko-yellow'} brutal-border shadow-[2px_2px_0_0_#111] cursor-pointer outline-none focus:border-doko-magenta" onchange="updateOrderStatus('${o.docId}', this.value)">
+                                ${['PLACED','PREPARING','BATCHED','OUT_FOR_DELIVERY','DELIVERED','CANCELLED'].map(s => `<option value="${s}" ${o.status===s?'selected':''}>${s.replace(/_/g,' ')}</option>`).join('')}
+                            </select>
+                        </div>
+                    </div>
+                `}).join('')}
+            </div>`;
+
+            container.innerHTML = tableHTML + cardsHTML;
+        }
+    </script>
+</body>
+</html>
