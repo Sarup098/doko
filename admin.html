@@ -192,6 +192,10 @@
         let alertedRapidOrders = new Set(); // Prevent alerting for the same order twice
         window.currentRapidOrderObj = null;
 
+        // 🚨 Create a global looping Audio object for the "Phone Call" ringtone
+        window.rapidAlertAudio = new Audio('https://assets.mixkit.co/active_storage/sfx/1359/1359-preview.mp3');
+        window.rapidAlertAudio.loop = true;
+
         // 🖨️ PRINTING LOGIC
         function generateLabelHTML(o) {
             const total = o.totalAmount || o.total || 0;
@@ -294,18 +298,24 @@
                 
                 showToast("🚨 Incoming Rapid Order!", "magenta");
                 
-                // Play Alert Sound
+                // Play the ringing sound continuously
                 try {
-                    const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
-                    audio.play().catch(e => console.log("Audio autoplay blocked by browser until user interacts."));
+                    window.rapidAlertAudio.play().catch(e => console.log("Audio autoplay blocked by browser until user interacts."));
                 } catch(e) {}
             }
         }
 
         window.dismissRapidAlert = () => {
+        window.dismissRapidAlert = () => {
             document.getElementById('admin-rapid-alert').classList.add('hidden');
             document.getElementById('admin-rapid-alert').classList.remove('flex');
             window.currentRapidOrderObj = null;
+            
+            // Stop the ringing sound immediately
+            if (window.rapidAlertAudio) {
+                window.rapidAlertAudio.pause();
+                window.rapidAlertAudio.currentTime = 0;
+            }
         };
 
         window.acceptRapidOrder = () => {
