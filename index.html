@@ -89,8 +89,6 @@
         .view-section.active { display: block; animation: fadeIn 0.3s ease-out; }
         
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes bounce-alert { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
-        .animate-bounce-alert { animation: bounce-alert 1s infinite; }
     </style>
 </head>
 <body class="text-doko-black antialiased flex flex-col min-h-screen pb-20 md:pb-0">
@@ -106,7 +104,7 @@
         </div>
         <nav class="w-full bg-white/95 backdrop-blur-md border-b-4 border-doko-black shadow-brutal">
             <div class="max-w-7xl mx-auto px-4 py-2 md:py-3 flex justify-between items-center">
-                <div class="flex items-center gap-2 cursor-pointer select-none group" onclick="navigate(currentUser?.role === 'CUSTOMER' ? 'shop' : currentUser?.role === 'ADMIN' ? 'admin' : 'driver')">
+                <div class="flex items-center gap-2 cursor-pointer select-none group" onclick="navigate('shop')">
                     <div class="bg-doko-yellow p-1.5 rounded-lg border-2 border-doko-black group-hover:-rotate-12 transition-transform">
                         <i class="ph-bold ph-shopping-bag text-2xl md:text-3xl text-doko-black"></i>
                     </div>
@@ -115,57 +113,65 @@
                 
                 <div class="hidden md:flex items-center gap-4">
                     <span id="user-badge" class="text-xs bg-gray-100 px-3 py-1.5 rounded-md font-bold uppercase tracking-wider flex items-center gap-2 border-2 border-doko-black"></span>
-                    <div id="desktop-links" class="flex items-center gap-4"></div>
+                    
+                    <button onclick="navigate('shop')" class="font-black uppercase tracking-wide hover:text-doko-magenta text-sm text-left">Shop</button>
+                    <button onclick="navigate('orders')" class="font-black uppercase tracking-wide hover:text-doko-magenta text-sm text-left">My Orders</button>
+                    
+                    <button onclick="navigate('cart')" class="relative p-1.5 rounded-xl border-2 border-transparent hover:border-doko-black hover:bg-doko-yellow transition-colors">
+                        <i class="ph-bold ph-shopping-cart text-2xl"></i>
+                        <span class="cart-badge-count hidden absolute -top-1 -right-1 bg-doko-magenta text-white text-[10px] font-black rounded-full w-5 h-5 flex items-center justify-center brutal-border">0</span>
+                    </button>
+
                     <button onclick="logout()" class="p-2 hover:bg-red-500 hover:text-white rounded-xl border-2 border-transparent hover:border-doko-black transition-colors"><i class="ph-bold ph-sign-out text-2xl"></i></button>
                 </div>
 
                 <div class="md:hidden flex items-center gap-3">
-                    <button id="mobile-top-cart" onclick="navigate('cart')" class="relative p-1 hidden">
+                    <button id="mobile-top-cart" onclick="navigate('cart')" class="relative p-1">
                         <i class="ph-bold ph-shopping-cart text-2xl"></i>
                         <span class="cart-badge-count absolute -top-1 -right-1 bg-doko-magenta text-white text-[9px] font-black rounded-full w-4 h-4 flex items-center justify-center border-2 border-doko-black hidden">0</span>
                     </button>
-                    <button onclick="toggleMobileMenu()" id="mobile-menu-btn" class="p-1.5 rounded-lg border-2 border-transparent"><i class="ph-bold ph-list text-2xl"></i></button>
+                    <button onclick="logout()" class="p-1.5 rounded-lg text-red-500 hover:bg-red-50"><i class="ph-bold ph-sign-out text-2xl"></i></button>
                 </div>
             </div>
         </nav>
-        
-        <div id="mobile-menu" class="hidden md:hidden bg-doko-bg border-b-4 border-doko-black py-4 px-4 flex flex-col gap-4 shadow-xl relative z-50">
-            <span id="mobile-user-name" class="text-xs font-black uppercase tracking-wider text-gray-500 border-b-2 border-gray-300 pb-2"></span>
-            <div id="mobile-links" class="flex flex-col gap-3"></div>
-            <button onclick="logout()" class="text-left text-red-500 w-full font-black text-xl flex items-center gap-2 mt-2"><i class="ph-bold ph-sign-out"></i> Logout</button>
-        </div>
     </header>
 
     <main class="flex-grow z-10 w-full relative">
         
-        <!-- LOGIN VIEW -->
         <div id="view-login" class="view-section active min-h-screen flex items-center justify-center p-4">
             <div class="max-w-md w-full bg-white p-8 md:p-10 text-center space-y-8 brutal-card shadow-brutal-lg">
                 <div class="relative inline-block">
                     <div class="absolute -inset-2 bg-doko-yellow rounded-full blur-xl opacity-50"></div>
                     <i class="ph-bold ph-shopping-bag text-6xl text-doko-black relative z-10"></i>
-                    <div class="absolute top-0 right-0 bg-doko-magenta text-white text-[10px] font-black px-2 py-0.5 rounded-md rotate-12 brutal-border z-20">FIREBASE</div>
+                    <div class="absolute top-0 right-0 bg-doko-green text-doko-black text-[10px] font-black px-2 py-0.5 rounded-md rotate-12 brutal-border z-20">CUSTOMER APP</div>
                 </div>
                 <div>
                     <h1 class="font-display text-5xl font-black text-doko-black tracking-tighter uppercase">DOKO</h1>
-                    <p class="text-gray-500 font-bold mt-2 text-xs uppercase tracking-widest">Local E-Commerce Demo</p>
+                    <p class="text-gray-500 font-bold mt-2 text-xs uppercase tracking-widest">Fresh Local Delivery</p>
                 </div>
-                <div class="space-y-3 pt-6 border-t-2 border-gray-100">
-                    <button onclick="login('CUSTOMER')" class="brutal-btn w-full py-3.5 text-base bg-doko-green text-doko-black flex justify-center items-center gap-2">
-                        <i class="ph-bold ph-user text-xl"></i> Shop as Customer
+                
+                <form onsubmit="handleLogin(event)" class="space-y-4 pt-4 border-t-2 border-gray-100 text-left">
+                    <div>
+                        <label class="block text-[10px] font-black uppercase text-gray-500 mb-1 tracking-widest">Full Name</label>
+                        <input required type="text" id="login-name" placeholder="Rahul Sharma" class="w-full bg-gray-50 p-3 rounded-xl font-bold outline-none focus:bg-doko-yellow/20 focus:border-doko-magenta transition-colors brutal-border shadow-[2px_2px_0_0_#111]" />
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-black uppercase text-gray-500 mb-1 tracking-widest">Phone Number</label>
+                        <input required type="tel" id="login-phone" placeholder="+919876543210" value="+91" class="w-full bg-gray-50 p-3 rounded-xl font-bold outline-none focus:bg-doko-yellow/20 focus:border-doko-magenta transition-colors brutal-border shadow-[2px_2px_0_0_#111]" />
+                    </div>
+                    <button type="submit" class="brutal-btn w-full py-3.5 text-base bg-doko-black text-white flex justify-center items-center gap-2 mt-4">
+                        Start Shopping <i class="ph-bold ph-arrow-right"></i>
                     </button>
-                    <button onclick="login('ADMIN')" class="brutal-btn w-full py-3.5 text-base bg-doko-magenta text-white flex justify-center items-center gap-2">
-                        <i class="ph-bold ph-storefront text-xl"></i> Admin Terminal
-                    </button>
-                    <button onclick="login('DRIVER')" class="brutal-btn w-full py-3.5 text-base bg-doko-black text-white flex justify-center items-center gap-2">
-                        <i class="ph-bold ph-truck text-xl"></i> Driver Hub
-                    </button>
+                </form>
+
+                <div class="pt-4">
+                    <button onclick="quickDemoLogin()" class="text-xs font-bold text-gray-400 hover:text-doko-magenta underline uppercase tracking-widest">Quick Demo Login</button>
                 </div>
+
                 <p id="db-status-text" class="text-[10px] text-gray-400 font-bold uppercase mt-4 animate-pulse">Connecting to Firebase Cloud...</p>
             </div>
         </div>
 
-        <!-- SHOP VIEW -->
         <div id="view-shop" class="view-section max-w-6xl mx-auto p-4 pt-24 md:pt-28 pb-8">
             <section class="text-center flex flex-col items-center mb-8">
                 <div class="inline-block bg-doko-yellow brutal-border px-3 py-1 rounded-full font-black uppercase text-[10px] md:text-xs mb-3 shadow-brutal rotate-[-2deg]">
@@ -187,12 +193,11 @@
                 <div class="flex overflow-x-auto gap-2 hide-scrollbar py-1" id="category-filters"></div>
             </div>
 
-            <div id="shop-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">
+            <div id="shop-grid" class="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
                 <!-- Products injected via JS -->
             </div>
         </div>
 
-        <!-- CART VIEW -->
         <div id="view-cart" class="view-section max-w-3xl mx-auto p-4 pt-24 md:pt-28 pb-8">
             <h2 class="font-display text-3xl md:text-4xl font-black mb-6 uppercase tracking-tight flex items-center gap-2">
                 Your Cart <i class="ph-bold ph-shopping-cart text-doko-magenta"></i>
@@ -200,7 +205,6 @@
             <div id="cart-container"></div>
         </div>
 
-        <!-- CHECKOUT VIEW -->
         <div id="view-checkout" class="view-section max-w-3xl mx-auto p-4 pt-24 md:pt-28 pb-8">
             <h2 class="font-display text-3xl md:text-4xl font-black mb-6 uppercase tracking-tight">Checkout 💸</h2>
             <form id="checkout-form" class="space-y-6" onsubmit="handlePlaceOrder(event)">
@@ -262,60 +266,11 @@
             </form>
         </div>
 
-        <!-- ORDERS VIEW -->
         <div id="view-orders" class="view-section max-w-4xl mx-auto p-4 pt-24 md:pt-28 pb-8 space-y-6">
             <h2 class="font-display text-3xl font-black uppercase tracking-tight flex items-center gap-2">
                 <i class="ph-bold ph-package text-doko-yellow text-4xl"></i> My Orders
             </h2>
             <div id="orders-container" class="space-y-4"></div>
-        </div>
-
-        <!-- ADMIN VIEW -->
-        <div id="view-admin" class="view-section max-w-7xl mx-auto p-4 pt-24 md:pt-28 pb-8 space-y-6">
-            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
-                <h2 class="font-display text-3xl md:text-4xl font-black uppercase tracking-tight">Admin Terminal 💻</h2>
-                <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest max-w-xs">Live Connected to Firestore</p>
-            </div>
-            
-            <div id="admin-rapid-alert" class="hidden bg-doko-magenta text-white p-4 md:p-6 rounded-2xl flex-col md:flex-row items-center justify-between gap-4 animate-bounce-alert brutal-border shadow-brutal-lg relative z-10">
-                <div class="flex items-center gap-3 w-full md:w-auto">
-                    <div class="bg-white p-2 md:p-3 rounded-full shrink-0"><i class="ph-bold ph-warning-circle text-2xl md:text-3xl text-doko-magenta"></i></div>
-                    <div>
-                        <h4 class="font-display text-xl md:text-2xl font-black uppercase tracking-tight">🚨 Rapid Alert!</h4>
-                        <p id="rapid-alert-details" class="font-bold text-white/90 text-xs md:text-sm"></p>
-                    </div>
-                </div>
-                <div class="flex w-full md:w-auto gap-2">
-                    <button onclick="acceptRapidOrder()" class="brutal-btn bg-white text-black flex-1 md:flex-none px-4 py-2.5 text-xs md:text-sm">Accept</button>
-                    <button onclick="dismissRapidAlert()" class="p-2.5 bg-white/20 rounded-xl hover:bg-white/30 transition-colors brutal-border"><i class="ph-bold ph-x"></i></button>
-                </div>
-            </div>
-
-            <div id="admin-stats" class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-5"></div>
-
-            <div class="bg-doko-black text-white p-5 md:p-6 rounded-2xl flex flex-col md:flex-row justify-between items-center gap-4 brutal-border shadow-brutal">
-                <div class="text-center md:text-left">
-                    <h3 class="font-display text-xl font-black uppercase flex items-center justify-center md:justify-start gap-2 mb-1"><i class="ph-bold ph-clock text-doko-cyan"></i> Batching</h3>
-                    <p class="font-bold text-gray-400 text-[10px] md:text-xs">Group pending STANDARD orders to driver.</p>
-                </div>
-                <button onclick="generateBatch()" class="brutal-btn bg-doko-cyan text-black w-full md:w-auto py-3 px-6 text-sm md:text-base">
-                    Dispatch Batch
-                </button>
-            </div>
-
-            <div id="admin-orders-container" class="space-y-4 md:space-y-0"></div>
-        </div>
-
-        <!-- DRIVER VIEW -->
-        <div id="view-driver" class="view-section max-w-md mx-auto p-4 pt-24 md:pt-28 pb-8 space-y-4">
-            <div class="bg-doko-cyan p-5 rounded-2xl brutal-border shadow-brutal flex justify-between items-center">
-                <h2 class="font-display text-2xl font-black uppercase flex items-center gap-2"><i class="ph-bold ph-truck text-3xl"></i> Hub</h2>
-                <div class="text-right border-l-2 border-black pl-3">
-                    <span class="text-[10px] font-black uppercase tracking-widest block">Pending</span>
-                    <span id="driver-pending-count" class="font-black text-2xl leading-none">0</span>
-                </div>
-            </div>
-            <div id="driver-deliveries" class="space-y-4"></div>
         </div>
     </main>
 
@@ -338,6 +293,7 @@
         </button>
     </div>
 
+    <!-- Toast Notification -->
     <div id="toast" class="fixed top-20 left-1/2 transform -translate-x-1/2 -translate-y-10 opacity-0 bg-doko-black text-white px-5 py-2.5 rounded-lg font-black text-xs md:text-sm brutal-border shadow-brutal transition-all duration-300 z-[60] pointer-events-none flex items-center gap-2 uppercase tracking-wider whitespace-nowrap">
         <i class="ph-bold ph-info text-lg" id="toast-icon"></i>
         <span id="toast-msg">Message</span>
@@ -345,9 +301,9 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, onSnapshot, updateDoc, doc, setDoc } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, onSnapshot, doc, setDoc } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
 
-        // 1. Firebase Configuration (Provided by User)
+        // Firebase Configuration
         const firebaseConfig = {
             apiKey: "AIzaSyCnAX2na4izR1MHqpSofpRQxj7R3BwLX5w",
             authDomain: "doko-d984c.firebaseapp.com",
@@ -361,7 +317,7 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // 2. Initial Seed Data (In case the database is empty)
+        // Fallback Seed Data
         const SEED_PRODUCTS = [
             { id: 'PROD-001', name: 'Aashirvaad Atta (5kg)', category: 'Groceries', price: 210, image: 'https://placehold.co/300x300/FFEA00/111111?text=Atta', isAvailable: true, color: 'bg-doko-yellow' },
             { id: 'PROD-002', name: 'Basmati Rice (1kg)', category: 'Groceries', price: 120, image: 'https://placehold.co/300x300/00FFFF/111111?text=Rice', isAvailable: true, color: 'bg-doko-cyan' },
@@ -373,23 +329,14 @@
             { id: 'PROD-008', name: 'Colgate MaxFresh', category: 'Personal Care', price: 95, image: 'https://placehold.co/300x300/111111/ffffff?text=Colgate', isAvailable: false, color: 'bg-doko-black' },
         ];
 
-        // 3. Application State
-        const MOCK_USERS = {
-            CUSTOMER: { phone: '+919876543210', name: 'Aesthetic Shopper', role: 'CUSTOMER' },
-            ADMIN: { phone: '+919999999999', name: 'Store Owner', role: 'ADMIN' },
-            DRIVER: { phone: '+918888888888', name: 'Delivery Partner', role: 'DRIVER' }
-        };
-
-        let currentUser = null;
+        let currentUser = JSON.parse(sessionStorage.getItem('doko_customer')) || null;
         let currentView = 'login';
         let cart = JSON.parse(sessionStorage.getItem('doko_cart') || '[]');
         let currentSearch = '';
         let currentCategory = 'All';
         
-        // Global variables bound to Firebase synced data
         let globalProducts = [];
         let globalOrders = [];
-        window.rapidAlertObj = null;
 
         window.showToast = (msg, type = 'info') => {
             const toast = document.getElementById('toast');
@@ -404,49 +351,35 @@
             setTimeout(() => { toast.style.transform = "translate(-50%, -20px)"; toast.style.opacity = "0"; }, 3000);
         };
 
-        window.login = (role) => {
-            currentUser = MOCK_USERS[role];
-            document.getElementById('user-badge').innerHTML = `<i class="ph-bold ph-user"></i> <span class="hidden md:inline">${currentUser.name}</span> (${role})`;
-            document.getElementById('mobile-user-name').innerText = `Hello, ${currentUser.name}`;
+        window.handleLogin = (e) => {
+            e.preventDefault();
+            const name = document.getElementById('login-name').value;
+            const phone = document.getElementById('login-phone').value;
             
-            let deskLinks = '', mobLinks = '';
-            if (role === 'CUSTOMER') {
-                const cLinks = `
-                    <button onclick="navigate('shop')" class="font-black uppercase tracking-wide hover:text-doko-magenta text-sm text-left">Shop Catalog</button>
-                    <button onclick="navigate('orders')" class="font-black uppercase tracking-wide hover:text-doko-magenta text-sm text-left">My Orders</button>
-                `;
-                deskLinks = cLinks + `
-                    <button onclick="navigate('cart')" class="relative p-1.5 rounded-xl border-2 border-transparent hover:border-doko-black hover:bg-doko-yellow transition-colors">
-                        <i class="ph-bold ph-shopping-cart text-2xl"></i>
-                        <span class="cart-badge-count hidden absolute -top-1 -right-1 bg-doko-magenta text-white text-[10px] font-black rounded-full w-5 h-5 flex items-center justify-center brutal-border">0</span>
-                    </button>
-                `;
-                mobLinks = cLinks;
-                document.getElementById('mobile-top-cart').classList.remove('hidden');
-                window.navigate('shop');
-            } else if (role === 'ADMIN') {
-                deskLinks = mobLinks = `<button onclick="navigate('admin')" class="font-black uppercase tracking-wide hover:text-doko-magenta text-sm text-left">Dashboard</button>`;
-                document.getElementById('mobile-top-cart').classList.add('hidden');
-                window.navigate('admin');
-            } else if (role === 'DRIVER') {
-                deskLinks = mobLinks = `<button onclick="navigate('driver')" class="font-black uppercase tracking-wide hover:text-doko-magenta text-sm text-left">Deliveries</button>`;
-                document.getElementById('mobile-top-cart').classList.add('hidden');
-                window.navigate('driver');
-            }
+            if(!name || !phone) return;
             
-            document.getElementById('desktop-links').innerHTML = deskLinks;
-            document.getElementById('mobile-links').innerHTML = mobLinks;
-            window.updateCartBadges();
+            currentUser = { name, phone, role: 'CUSTOMER' };
+            sessionStorage.setItem('doko_customer', JSON.stringify(currentUser));
+            completeLoginSetup();
         };
 
-        window.logout = () => { currentUser = null; currentView = 'login'; window.navigate('login'); };
+        window.quickDemoLogin = () => {
+            currentUser = { name: 'Aesthetic Shopper', phone: '+919876543210', role: 'CUSTOMER' };
+            sessionStorage.setItem('doko_customer', JSON.stringify(currentUser));
+            completeLoginSetup();
+            window.showToast("Logged in as Demo Customer", "success");
+        };
 
-        window.toggleMobileMenu = () => {
-            const menu = document.getElementById('mobile-menu');
-            const btn = document.getElementById('mobile-menu-btn');
-            menu.classList.toggle('hidden');
-            btn.classList.toggle('bg-doko-yellow');
-            btn.classList.toggle('border-doko-black');
+        function completeLoginSetup() {
+            document.getElementById('user-badge').innerHTML = `<i class="ph-bold ph-user"></i> <span class="hidden md:inline">${currentUser.name}</span>`;
+            window.updateCartBadges();
+            window.navigate('shop');
+        }
+
+        window.logout = () => { 
+            currentUser = null; 
+            sessionStorage.removeItem('doko_customer');
+            window.navigate('login'); 
         };
 
         window.navigate = (viewName) => {
@@ -454,21 +387,14 @@
             document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
             document.getElementById(`view-${viewName}`).classList.add('active');
             
-            const menu = document.getElementById('mobile-menu');
-            if(!menu.classList.contains('hidden')) window.toggleMobileMenu();
-
             if (viewName !== 'login') {
                 document.getElementById('main-header').classList.remove('hidden');
-                const bottomNav = document.getElementById('bottom-nav');
-                if(currentUser?.role === 'CUSTOMER') {
-                    bottomNav.classList.remove('hidden');
-                    bottomNav.classList.add('flex');
-                    document.querySelectorAll('.nav-btn').forEach(btn => {
-                        btn.dataset.target === viewName ? btn.classList.add('bg-doko-black', 'text-doko-green') : btn.classList.remove('bg-doko-black', 'text-doko-green');
-                    });
-                } else {
-                    bottomNav.classList.add('hidden'); bottomNav.classList.remove('flex');
-                }
+                document.getElementById('bottom-nav').classList.remove('hidden');
+                document.getElementById('bottom-nav').classList.add('flex');
+                
+                document.querySelectorAll('.nav-btn').forEach(btn => {
+                    btn.dataset.target === viewName ? btn.classList.add('bg-doko-black', 'text-doko-green') : btn.classList.remove('bg-doko-black', 'text-doko-green');
+                });
             } else {
                 document.getElementById('main-header').classList.add('hidden');
                 document.getElementById('bottom-nav').classList.add('hidden');
@@ -479,56 +405,36 @@
             window.scrollTo(0, 0);
         };
 
+        // Firebase Listeners
         const setupFirebaseListeners = () => {
             document.getElementById('db-status-text').innerText = "Connected to Firestore ✅";
             document.getElementById('db-status-text').classList.remove('animate-pulse');
             document.getElementById('db-status-text').classList.add('text-doko-green');
             
-            // Listen to Products
             onSnapshot(collection(db, "products"), (snapshot) => {
                 if (snapshot.empty) {
-                    // Auto-Seed if empty
-                    SEED_PRODUCTS.forEach(async (p) => {
-                        await setDoc(doc(db, "products", p.id), p);
-                    });
+                    SEED_PRODUCTS.forEach(async (p) => { await setDoc(doc(db, "products", p.id), p); });
                 } else {
                     globalProducts = snapshot.docs.map(doc => ({ ...doc.data(), docId: doc.id }));
-                    refreshViews();
+                    if(currentView === 'shop') renderShop();
                 }
             }, (error) => console.error(error));
 
-            // Listen to Orders
             onSnapshot(collection(db, "orders"), (snapshot) => {
+                // Keep all orders in memory to sort properly
                 globalOrders = snapshot.docs.map(doc => ({ ...doc.data(), docId: doc.id }))
                                     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-                refreshViews();
-                
-                // Trigger Admin Rapid Alert
-                if (currentUser?.role === 'ADMIN') {
-                    const rapid = globalOrders.find(o => o.deliveryMode === 'RAPID' && o.status === 'PLACED');
-                    if (rapid && (!window.rapidAlertObj || window.rapidAlertObj.docId !== rapid.docId)) {
-                        window.rapidAlertObj = rapid;
-                        document.getElementById('admin-rapid-alert').classList.remove('hidden');
-                        document.getElementById('admin-rapid-alert').classList.add('flex');
-                        document.getElementById('rapid-alert-details').innerText = `${rapid.docId.substring(0,8)}... • ${rapid.customerName} • ₹${rapid.total}`;
-                        window.showToast("🚨 Incoming Rapid Order!", "magenta");
-                        
-                        // Play Sound
-                        const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
-                        audio.play().catch(e => console.log("Audio play blocked by browser"));
-                    }
-                }
+                if(currentView === 'orders') renderOrders();
             }, (error) => console.error(error));
         };
 
         function refreshViews() {
             if(currentView === 'shop') renderShop();
+            if(currentView === 'cart') renderCart();
             if(currentView === 'orders') renderOrders();
-            if(currentView === 'admin') renderAdmin();
-            if(currentView === 'driver') renderDriver();
         }
 
-        // Customer Logic
+        // Cart Logic
         window.saveCart = () => { sessionStorage.setItem('doko_cart', JSON.stringify(cart)); window.updateCartBadges(); };
         window.updateCartBadges = () => {
             const count = cart.reduce((sum, item) => sum + item.qty, 0);
@@ -644,6 +550,7 @@
 
         window.handlePlaceOrder = async (e) => {
             e.preventDefault();
+            if(!currentUser) return window.showToast("Please login first", "error");
             if(cart.length === 0) return window.showToast("Cart empty!", "error");
 
             const mode = document.querySelector('input[name="deliveryMode"]:checked').value;
@@ -664,6 +571,7 @@
             };
 
             try {
+                // Writing to the same unified Firebase database!
                 await addDoc(collection(db, "orders"), order);
                 cart = []; window.saveCart();
                 window.showToast("Order placed successfully via Cloud!", "success");
@@ -675,6 +583,7 @@
         };
 
         function renderOrders() {
+            // Filter global orders to only show this customer's orders
             const myOrders = globalOrders.filter(o => o.customerPhone === currentUser.phone);
             const container = document.getElementById('orders-container');
 
@@ -708,7 +617,7 @@
                         </div>
                         <span class="px-2 py-0.5 rounded text-[9px] font-black uppercase brutal-border border-white ${o.deliveryMode==='RAPID' ? 'bg-doko-magenta text-white' : 'bg-doko-cyan text-black'}">${o.deliveryMode}</span>
                         <div class="text-right">
-                            <span class="text-[8px] text-gray-400 font-black uppercase tracking-widest block">Total</span>
+                            <span class="text-[8px] text-gray-400 font-black uppercase tracking-widest block">Total COD</span>
                             <span class="font-black text-sm md:text-base text-doko-yellow">₹${o.total}</span>
                         </div>
                     </div>
@@ -726,151 +635,14 @@
             }).join('');
         }
 
-        window.updateOrderStatus = async (id, status) => {
-            try {
-                await updateDoc(doc(db, "orders", id), { status });
-                window.showToast("Cloud Status Updated");
-            } catch (err) {
-                console.error(err);
-                window.showToast("Failed to update status", "error");
-            }
-        };
-
-        window.acceptRapidOrder = () => {
-            if(window.rapidAlertObj) window.updateOrderStatus(window.rapidAlertObj.docId, 'PREPARING');
-            window.dismissRapidAlert();
-        };
-
-        window.dismissRapidAlert = () => {
-            document.getElementById('admin-rapid-alert').classList.add('hidden');
-            document.getElementById('admin-rapid-alert').classList.remove('flex');
-            window.rapidAlertObj = null;
-        };
-
-        window.generateBatch = async () => {
-            let count = 0;
-            for (let o of globalOrders) {
-                if(o.deliveryMode === 'STANDARD' && o.status === 'PLACED') {
-                    await updateDoc(doc(db, "orders", o.docId), {
-                        status: 'BATCHED',
-                        driverAssigned: MOCK_USERS.DRIVER.phone
-                    });
-                    count++;
-                }
-            }
-            if(count === 0) return window.showToast("No standard orders pending.", "error");
-            window.showToast(`Batch generated for ${count} orders! Dispatched to Driver.`);
-        };
-
-        function renderAdmin() {
-            const pendingStd = globalOrders.filter(o => o.deliveryMode === 'STANDARD' && o.status === 'PLACED').length;
-            const pendingRap = globalOrders.filter(o => o.deliveryMode === 'RAPID' && o.status === 'PLACED').length;
-            
-            document.getElementById('admin-stats').innerHTML = `
-                <div class="bg-white p-4 rounded-xl brutal-border shadow-[2px_2px_0_0_#111]"><p class="text-[9px] font-black uppercase tracking-widest text-gray-500 mb-1">Orders</p><p class="font-display text-2xl font-black">${globalOrders.length}</p></div>
-                <div class="bg-doko-cyan p-4 rounded-xl brutal-border shadow-[2px_2px_0_0_#111]"><p class="text-[9px] font-black uppercase tracking-widest text-black/70 mb-1">Std (Pend)</p><p class="font-display text-2xl font-black">${pendingStd}</p></div>
-                <div class="bg-doko-magenta text-white p-4 rounded-xl brutal-border shadow-[2px_2px_0_0_#111]"><p class="text-[9px] font-black uppercase tracking-widest text-white/70 mb-1">Rap (Pend)</p><p class="font-display text-2xl font-black">${pendingRap}</p></div>
-                <div class="bg-doko-yellow p-4 rounded-xl brutal-border shadow-[2px_2px_0_0_#111]"><p class="text-[9px] font-black uppercase tracking-widest text-black/70 mb-1">Revenue</p><p class="font-display text-2xl font-black">₹${globalOrders.reduce((s,o)=>s+o.total,0)}</p></div>
-            `;
-
-            const container = document.getElementById('admin-orders-container');
-            if(globalOrders.length === 0) {
-                container.innerHTML = `<div class="text-center p-8 text-gray-400 font-bold uppercase text-xs brutal-border bg-white rounded-xl">No Cloud Activity</div>`;
-                return;
-            }
-
-            let tableHTML = `
-            <div class="hidden md:block bg-white rounded-2xl brutal-border shadow-brutal overflow-hidden">
-                <table class="w-full text-left border-collapse text-sm">
-                    <thead class="bg-gray-100 text-[10px] font-black uppercase tracking-widest border-b-2 border-black">
-                        <tr><th class="p-3">Order ID</th><th class="p-3">Customer</th><th class="p-3">Mode</th><th class="p-3">Status</th><th class="p-3">Action</th></tr>
-                    </thead>
-                    <tbody>
-                        ${globalOrders.map(o => `
-                            <tr class="border-b border-gray-200 hover:bg-gray-50">
-                                <td class="p-3 font-display font-black uppercase">${o.docId.substring(0,8)}</td>
-                                <td class="p-3"><p class="font-bold">${o.customerName}</p><p class="text-[10px] text-gray-500">${o.customerPhone}</p></td>
-                                <td class="p-3"><span class="px-2 py-0.5 rounded text-[9px] font-black uppercase brutal-border ${o.deliveryMode==='RAPID'?'bg-doko-magenta text-white':'bg-doko-cyan'}">${o.deliveryMode}</span></td>
-                                <td class="p-3"><span class="px-2 py-0.5 rounded text-[9px] font-black uppercase brutal-border ${o.status==='DELIVERED'?'bg-doko-green':'bg-doko-black text-white'}">${o.status.replace(/_/g,' ')}</span></td>
-                                <td class="p-3">
-                                    <select class="font-bold text-[10px] uppercase p-1.5 rounded bg-gray-50 brutal-border cursor-pointer outline-none" onchange="updateOrderStatus('${o.docId}', this.value)">
-                                        ${['PLACED','PREPARING','BATCHED','OUT_FOR_DELIVERY','DELIVERED','CANCELLED'].map(s => `<option value="${s}" ${o.status===s?'selected':''}>${s.replace(/_/g,' ')}</option>`).join('')}
-                                    </select>
-                                </td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
-            </div>`;
-
-            let cardsHTML = `
-            <div class="md:hidden flex flex-col gap-3">
-                ${globalOrders.map(o => `
-                    <div class="bg-white p-3 rounded-xl brutal-border shadow-[2px_2px_0_0_#111] flex flex-col gap-2">
-                        <div class="flex justify-between items-center border-b-2 border-gray-100 pb-2">
-                            <span class="font-display font-black uppercase">${o.docId.substring(0,8)}</span>
-                            <span class="px-2 py-0.5 rounded text-[9px] font-black uppercase brutal-border ${o.deliveryMode==='RAPID'?'bg-doko-magenta text-white':'bg-doko-cyan'}">${o.deliveryMode}</span>
-                        </div>
-                        <div>
-                            <p class="font-bold text-sm leading-tight">${o.customerName} <span class="text-[10px] text-gray-500 block">${o.address}</span></p>
-                        </div>
-                        <div class="flex justify-between items-center pt-1">
-                            <span class="text-[9px] font-black uppercase text-gray-400">Status</span>
-                            <select class="font-bold text-[10px] uppercase p-1.5 rounded bg-doko-yellow brutal-border cursor-pointer outline-none" onchange="updateOrderStatus('${o.docId}', this.value)">
-                                ${['PLACED','PREPARING','BATCHED','OUT_FOR_DELIVERY','DELIVERED','CANCELLED'].map(s => `<option value="${s}" ${o.status===s?'selected':''}>${s.replace(/_/g,' ')}</option>`).join('')}
-                            </select>
-                        </div>
-                    </div>
-                `).join('')}
-            </div>`;
-
-            container.innerHTML = tableHTML + cardsHTML;
-        }
-
-        function renderDriver() {
-            const pending = globalOrders.filter(o => o.driverAssigned === currentUser.phone && o.status !== 'DELIVERED' && o.status !== 'CANCELLED');
-            document.getElementById('driver-pending-count').innerText = pending.length;
-            
-            const container = document.getElementById('driver-deliveries');
-            if(pending.length === 0) {
-                container.innerHTML = `<div class="text-center p-8 bg-white brutal-border rounded-2xl shadow-[2px_2px_0_0_#111]"><i class="ph-bold ph-check-circle text-5xl text-doko-green mb-2"></i><p class="font-black uppercase text-sm text-gray-400">All Caught Up</p></div>`;
-                return;
-            }
-
-            container.innerHTML = pending.map((o, idx) => `
-                <div class="bg-white rounded-2xl brutal-border shadow-brutal overflow-hidden flex flex-col">
-                    <div class="p-3 border-b-2 border-black flex justify-between items-center ${o.deliveryMode==='RAPID' ? 'bg-doko-magenta text-white' : 'bg-doko-yellow'}">
-                        <span class="font-black uppercase tracking-widest text-[10px]">${o.deliveryMode==='RAPID' ? '⚡ RAPID URGENT' : `SEQ #${idx+1}`}</span>
-                        <span class="font-display font-black text-sm uppercase">${o.docId.substring(0,8)}</span>
-                    </div>
-                    <div class="p-4 space-y-4">
-                        <div>
-                            <h3 class="font-display text-xl font-black">${o.customerName}</h3>
-                            <div class="bg-gray-50 p-2 rounded-lg mt-2 border-2 border-gray-200 font-bold text-xs flex gap-2">
-                                <i class="ph-bold ph-map-pin text-doko-magenta text-base shrink-0"></i> 
-                                <span>${o.address} <br/> <span class="text-gray-500 font-normal">LM: ${o.landmark || 'None'}</span></span>
-                            </div>
-                        </div>
-                        <div class="bg-doko-black text-white p-3 rounded-xl flex justify-between items-center brutal-border shadow-[2px_2px_0_0_#111]">
-                            <span class="font-black uppercase tracking-widest text-[9px] text-gray-400">Collect COD</span>
-                            <span class="font-display font-black text-xl text-doko-cyan">₹${o.total}</span>
-                        </div>
-                        <div class="grid grid-cols-2 gap-2">
-                            <a href="tel:${o.customerPhone}" class="flex justify-center items-center gap-1 bg-doko-yellow py-2.5 rounded-xl font-black uppercase text-[10px] brutal-border shadow-[2px_2px_0_0_#111]"><i class="ph-bold ph-phone text-sm"></i> Call</a>
-                            <a href="https://maps.google.com/?q=${encodeURIComponent(o.address)}" target="_blank" class="flex justify-center items-center gap-1 bg-doko-cyan py-2.5 rounded-xl font-black uppercase text-[10px] brutal-border shadow-[2px_2px_0_0_#111]"><i class="ph-bold ph-navigation-arrow text-sm"></i> Map</a>
-                        </div>
-                        ${o.status !== 'OUT_FOR_DELIVERY' ? 
-                            `<button onclick="updateOrderStatus('${o.docId}', 'OUT_FOR_DELIVERY')" class="brutal-btn w-full py-3 text-xs bg-doko-black text-white mt-1">Start Delivery</button>` : 
-                            `<button onclick="updateOrderStatus('${o.docId}', 'DELIVERED')" class="brutal-btn w-full py-3 text-xs bg-doko-green text-black mt-1 flex justify-center items-center gap-1"><i class="ph-bold ph-check-circle text-base"></i> Mark Delivered</button>`
-                        }
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        // Initialize App on load
+        // Initialize App
         setupFirebaseListeners();
-        window.navigate('login');
+        
+        if (currentUser) {
+            completeLoginSetup();
+        } else {
+            window.navigate('login');
+        }
         
     </script>
 </body>
