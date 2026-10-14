@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>DOKO | Driver Hub</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700;900&family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        display: ['Space Grotesk', 'sans-serif'],
+                    },
+                    colors: {
+                        doko: {
+                            cyan: '#00FFFF',
+                            magenta: '#FF00FF',
+                            yellow: '#FFEA00',
+                            black: '#111111',
+                            green: '#a3e635', 
+                            bg: '#FDF8E7'
+                        }
+                    },
+                    boxShadow: {
+                        'brutal': '4px 4px 0px 0px #111',
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        body {
+            background-color: #FDF8E7; 
+            background-image: radial-gradient(#11111122 1px, transparent 1px);
+            background-size: 20px 20px;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .brutal-border { border: 2px solid #111; }
+        .brutal-card {
+            background: white;
+            border: 2px solid #111;
+            box-shadow: 4px 4px 0px 0px #111;
+            border-radius: 1rem;
+        }
+        
+        .brutal-btn {
+            border: 2px solid #111;
+            box-shadow: 4px 4px 0px 0px #111;
+            transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border-radius: 0.75rem;
+        }
+        .brutal-btn:hover:not(:disabled) {
+            transform: translate(-2px, -2px);
+            box-shadow: 6px 6px 0px 0px #111;
+        }
+        .brutal-btn:active:not(:disabled) {
+            transform: translate(2px, 2px);
+            box-shadow: 2px 2px 0px 0px #111;
+        }
+    </style>
+</head>
+<body class="text-doko-black antialiased p-4">
+
+    <!-- Mobile-Optimized Container -->
+    <div class="max-w-md mx-auto space-y-5 pb-8">
+        
+        <!-- Header -->
+        <div class="bg-doko-cyan p-5 rounded-2xl brutal-border shadow-brutal flex justify-between items-center relative overflow-hidden">
+            <div class="relative z-10">
+                <h1 class="font-display text-2xl font-black uppercase tracking-tight flex items-center gap-2">
+                    <i class="ph-bold ph-truck text-3xl"></i> Driver Hub
+                </h1>
+                <p class="font-bold text-xs mt-1 text-black/70 uppercase tracking-widest flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-doko-magenta animate-pulse"></span> Live Route
+                </p>
+            </div>
+            <div class="text-right border-l-2 border-black pl-3 relative z-10">
+                <span class="text-[10px] font-black uppercase tracking-widest block text-black/70">Pending</span>
+                <span id="pending-count" class="font-display font-black text-3xl leading-none">0</span>
+            </div>
+            <!-- Decorative circle -->
+            <div class="absolute -right-6 -top-6 w-24 h-24 bg-white/30 rounded-full blur-xl z-0"></div>
+        </div>
+
+        <!-- Deliveries List -->
+        <div id="deliveries-container" class="space-y-4">
+            <!-- Injected via JS -->
+            <div class="text-center p-8 bg-white brutal-border rounded-2xl shadow-brutal">
+                <i class="ph-bold ph-spinner animate-spin text-4xl text-gray-300 mb-2"></i>
+                <p class="font-black uppercase text-sm text-gray-400">Loading Route...</p>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed top-10 left-1/2 transform -translate-x-1/2 -translate-y-20 opacity-0 bg-doko-black text-white px-6 py-3 rounded-xl font-black text-xs brutal-border shadow-brutal transition-all duration-300 z-50 flex items-center gap-2 uppercase tracking-wider whitespace-nowrap pointer-events-none">
+        <i class="ph-bold ph-info text-xl" id="toast-icon"></i>
+        <span id="toast-msg">Message</span>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-app.js";
+        import { getFirestore, collection, onSnapshot, doc, updateDoc } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
+
+        // Your Exact Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCnAX2na4izR1MHqpSofpRQxj7R3BwLX5w",
+            authDomain: "doko-d984c.firebaseapp.com",
+            projectId: "doko-d984c",
+            storageBucket: "doko-d984c.firebasestorage.app",
+            messagingSenderId: "604294295784",
+            appId: "1:604294295784:web:2dca7a5e70b4286a94d95d",
+            measurementId: "G-JD6WMCJ88D"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        let activeDeliveries = [];
+        const DRIVER_PHONE = '+918888888888'; // Mock Driver Identity
+
+        // UI Toast Function
+        window.showToast = (msg, type = 'success') => {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-msg').textContent = msg;
+            toast.className = `fixed top-10 left-1/2 transform -translate-x-1/2 translate-y-0 opacity-100 px-6 py-3 rounded-xl font-black text-xs brutal-border shadow-brutal transition-all duration-300 z-50 flex items-center gap-2 uppercase tracking-wider whitespace-nowrap ${
+                type === 'success' ? 'bg-doko-green text-black' : 'bg-doko-yellow text-black'
+            }`;
+            document.getElementById('toast-icon').className = type === 'success' ? 'ph-bold ph-check-circle text-lg' : 'ph-bold ph-truck text-lg';
+
+            setTimeout(() => { 
+                toast.style.transform = "translate(-50%, -50px)"; 
+                toast.style.opacity = "0"; 
+            }, 3000);
+        };
+
+        // Real-Time Listener for Orders
+        onSnapshot(collection(db, "orders"), (snapshot) => {
+            const allOrders = snapshot.docs.map(doc => ({ ...doc.data(), docId: doc.id }));
+            
+            // Filter orders that need delivery:
+            // 1. STANDARD orders that are BATCHED or OUT_FOR_DELIVERY
+            // 2. RAPID orders that are PREPARING or OUT_FOR_DELIVERY
+            activeDeliveries = allOrders.filter(o => 
+                (o.status === 'BATCHED' || o.status === 'OUT_FOR_DELIVERY') || 
+                (o.deliveryMode === 'RAPID' && (o.status === 'PREPARING' || o.status === 'OUT_FOR_DELIVERY'))
+            ).sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt)); // Oldest first (FIFO routing)
+            
+            renderDeliveries();
+        }, (error) => {
+            console.error("Firebase Read Error:", error);
+            showToast("Database Connection Error", "error");
+        });
+
+        // Update Specific Order Status
+        window.updateOrderStatus = async (docId, newStatus) => {
+            try {
+                // Ensure the driver's phone is attached when they take action
+                await updateDoc(doc(db, "orders", docId), { 
+                    status: newStatus,
+                    driverAssigned: DRIVER_PHONE 
+                });
+                if(newStatus === 'DELIVERED') {
+                    showToast("Order Delivered Successfully!", "success");
+                } else {
+                    showToast(`Status updated to ${newStatus.replace(/_/g, ' ')}`, "yellow");
+                }
+            } catch (error) {
+                console.error("Update error:", error);
+                alert("Failed to update status. Check your connection.");
+            }
+        };
+
+        function renderDeliveries() {
+            document.getElementById('pending-count').innerText = activeDeliveries.length;
+            const container = document.getElementById('deliveries-container');
+            
+            if(activeDeliveries.length === 0) {
+                container.innerHTML = `
+                <div class="text-center p-10 bg-white brutal-border rounded-2xl shadow-brutal flex flex-col items-center">
+                    <div class="bg-doko-green p-4 rounded-full mb-3 brutal-border shadow-[2px_2px_0_0_#111]">
+                        <i class="ph-bold ph-check-circle text-4xl text-black"></i>
+                    </div>
+                    <p class="font-black uppercase tracking-widest text-lg text-black">All Caught Up</p>
+                    <p class="font-bold text-xs text-gray-400 mt-1 uppercase">Waiting for next batch...</p>
+                </div>`;
+                return;
+            }
+
+            container.innerHTML = activeDeliveries.map((o, idx) => {
+                const total = o.totalAmount || o.total || 0;
+                const isRapid = o.deliveryMode === 'RAPID';
+                
+                return `
+                <div class="bg-white rounded-2xl brutal-border shadow-brutal overflow-hidden flex flex-col">
+                    
+                    <!-- Card Header -->
+                    <div class="p-3 border-b-2 border-black flex justify-between items-center ${isRapid ? 'bg-doko-magenta text-white' : 'bg-doko-yellow text-black'}">
+                        <span class="font-black uppercase tracking-widest text-[10px] md:text-xs flex items-center gap-1">
+                            ${isRapid ? '<i class="ph-bold ph-lightning text-sm"></i> RAPID URGENT' : `<i class="ph-bold ph-package text-sm"></i> STOP #${idx+1}`}
+                        </span>
+                        <span class="font-display font-black text-sm uppercase">${o.docId.substring(0,8)}</span>
+                    </div>
+                    
+                    <div class="p-4 space-y-4">
+                        <!-- Customer Info -->
+                        <div>
+                            <h3 class="font-display text-xl font-black leading-tight">${o.customerName || 'Guest Customer'}</h3>
+                            <div class="bg-gray-50 p-3 rounded-xl mt-2 border-2 border-gray-200 font-bold text-xs flex gap-2">
+                                <i class="ph-bold ph-map-pin text-doko-magenta text-lg shrink-0 mt-0.5"></i> 
+                                <span>
+                                    ${o.address} 
+                                    <br/> 
+                                    <span class="text-gray-500 font-normal uppercase tracking-wider text-[10px] mt-1 block">LM: ${o.landmark || 'None Provided'}</span>
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Payment Banner -->
+                        <div class="bg-doko-black text-white p-3 rounded-xl flex justify-between items-center brutal-border shadow-[2px_2px_0_0_#111]">
+                            <span class="font-black uppercase tracking-widest text-[10px] text-gray-400">Collect (COD)</span>
+                            <span class="font-display font-black text-2xl text-doko-cyan">₹${total}</span>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="grid grid-cols-2 gap-2">
+                            <a href="tel:${o.customerPhone}" class="flex justify-center items-center gap-1.5 bg-gray-100 py-3 rounded-xl font-black uppercase text-[10px] brutal-border shadow-[2px_2px_0_0_#111] hover:bg-gray-200 active:translate-y-[2px] active:translate-x-[2px] active:shadow-none transition-all text-black">
+                                <i class="ph-bold ph-phone text-base"></i> Call
+                            </a>
+                            <a href="https://maps.google.com/?q=${encodeURIComponent(o.address)}" target="_blank" class="flex justify-center items-center gap-1.5 bg-doko-cyan py-3 rounded-xl font-black uppercase text-[10px] brutal-border shadow-[2px_2px_0_0_#111] hover:bg-[#00e6e6] active:translate-y-[2px] active:translate-x-[2px] active:shadow-none transition-all text-black">
+                                <i class="ph-bold ph-navigation-arrow text-base"></i> Map
+                            </a>
+                        </div>
+                        
+                        <!-- Status Flow -->
+                        <div class="pt-2 border-t-2 border-gray-100">
+                            ${o.status !== 'OUT_FOR_DELIVERY' ? 
+                                `<button onclick="updateOrderStatus('${o.docId}', 'OUT_FOR_DELIVERY')" class="brutal-btn w-full py-4 text-xs bg-doko-black text-white flex items-center justify-center gap-2">
+                                    <i class="ph-bold ph-play-circle text-lg"></i> Start Delivery
+                                </button>` : 
+                                `<button onclick="updateOrderStatus('${o.docId}', 'DELIVERED')" class="brutal-btn w-full py-4 text-xs bg-doko-green text-black flex items-center justify-center gap-2">
+                                    <i class="ph-bold ph-check-circle text-lg"></i> Mark Delivered & Paid
+                                </button>`
+                            }
+                        </div>
+                    </div>
+                </div>
+                `;
+            }).join('');
+        }
+    </script>
+</body>
+</html>
