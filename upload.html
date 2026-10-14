@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DOKO | Bulk Inventory Uploader</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700;900&family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        display: ['Space Grotesk', 'sans-serif'],
+                    },
+                    colors: {
+                        doko: {
+                            cyan: '#00FFFF',
+                            magenta: '#FF00FF',
+                            yellow: '#FFEA00',
+                            black: '#111111',
+                            green: '#a3e635', 
+                            bg: '#FDF8E7'
+                        }
+                    },
+                    boxShadow: {
+                        'brutal': '4px 4px 0px 0px #111',
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        body {
+            background-color: #FDF8E7; 
+            background-image: radial-gradient(#11111122 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+        .brutal-border { border: 2px solid #111; }
+        .brutal-card {
+            background: white;
+            border: 2px solid #111;
+            box-shadow: 4px 4px 0px 0px #111;
+            border-radius: 1rem;
+        }
+        .brutal-btn {
+            border: 2px solid #111;
+            box-shadow: 4px 4px 0px 0px #111;
+            transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .brutal-btn:hover:not(:disabled) {
+            transform: translate(-2px, -2px);
+            box-shadow: 6px 6px 0px 0px #111;
+        }
+        .brutal-btn:active:not(:disabled) {
+            transform: translate(2px, 2px);
+            box-shadow: 2px 2px 0px 0px #111;
+        }
+    </style>
+</head>
+<body class="text-doko-black antialiased p-4 md:p-8">
+
+    <div class="max-w-6xl mx-auto">
+        <!-- Header -->
+        <div class="brutal-card p-6 md:p-8 bg-doko-cyan mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+                <h1 class="font-display text-3xl md:text-4xl font-black uppercase tracking-tight flex items-center gap-3">
+                    <i class="ph-bold ph-database text-4xl"></i> DOKO Bulk Uploader
+                </h1>
+                <p class="font-bold text-sm mt-2 opacity-80 uppercase tracking-widest">Add up to 20 products to Firebase instantly</p>
+            </div>
+            
+            <div class="bg-white p-4 rounded-xl brutal-border flex items-center gap-3 shadow-[2px_2px_0_0_#111]">
+                <label class="font-black text-sm uppercase">Rows to Add:</label>
+                <input type="number" id="row-count" min="1" max="20" value="5" class="w-16 p-2 text-center brutal-border rounded-lg font-black outline-none focus:border-doko-magenta">
+                <button onclick="generateRows()" class="brutal-btn bg-doko-yellow px-4 py-2 rounded-lg text-xs">Generate</button>
+            </div>
+        </div>
+
+        <!-- Form Area -->
+        <div class="brutal-card p-4 md:p-6 bg-white mb-8 overflow-x-auto">
+            <div class="min-w-[800px]">
+                <!-- Table Headers -->
+                <div class="grid grid-cols-12 gap-3 mb-4 px-2 font-black uppercase text-xs tracking-widest text-gray-500 border-b-2 border-black pb-2">
+                    <div class="col-span-2">Product ID</div>
+                    <div class="col-span-3">Product Name</div>
+                    <div class="col-span-2">Category</div>
+                    <div class="col-span-1">Price (₹)</div>
+                    <div class="col-span-2">Image URL</div>
+                    <div class="col-span-1">Color Theme</div>
+                    <div class="col-span-1 text-center">In Stock</div>
+                </div>
+
+                <!-- Generated Rows Container -->
+                <div id="rows-container" class="space-y-3">
+                    <!-- Rows will be injected here via JavaScript -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Submit Actions -->
+        <div class="flex justify-between items-center bg-doko-black text-white p-6 rounded-2xl brutal-border shadow-brutal">
+            <p class="font-bold text-sm text-gray-400" id="status-text">Ready to upload to Firebase Cloud...</p>
+            <button onclick="uploadToFirebase()" id="upload-btn" class="brutal-btn bg-doko-green text-black px-8 py-4 rounded-xl text-lg flex items-center gap-2 hover:bg-[#86efac]">
+                <i class="ph-bold ph-cloud-arrow-up text-2xl"></i> Upload All to Database
+            </button>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed top-10 left-1/2 transform -translate-x-1/2 -translate-y-20 opacity-0 bg-doko-black text-white px-6 py-3 rounded-xl font-black text-sm brutal-border shadow-brutal transition-all duration-300 z-50 flex items-center gap-2 uppercase tracking-wider">
+        <i class="ph-bold ph-info text-xl" id="toast-icon"></i>
+        <span id="toast-msg">Message</span>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-app.js";
+        import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
+        import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-storage.js";
+
+        // Your Exact Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCnAX2na4izR1MHqpSofpRQxj7R3BwLX5w",
+            authDomain: "doko-d984c.firebaseapp.com",
+            projectId: "doko-d984c",
+            storageBucket: "doko-d984c.firebasestorage.app",
+            messagingSenderId: "604294295784",
+            appId: "1:604294295784:web:2dca7a5e70b4286a94d95d",
+            measurementId: "G-JD6WMCJ88D"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const storage = getStorage(app);
+
+        // UI Toast Function
+        window.showToast = (msg, type = 'success') => {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-msg').textContent = msg;
+            toast.className = `fixed top-10 left-1/2 transform -translate-x-1/2 translate-y-0 opacity-100 px-6 py-3 rounded-xl font-black text-sm brutal-border shadow-brutal transition-all duration-300 z-50 flex items-center gap-2 uppercase tracking-wider ${
+                type === 'success' ? 'bg-doko-green text-black' : 'bg-red-500 text-white'
+            }`;
+            document.getElementById('toast-icon').className = type === 'success' ? 'ph-bold ph-check-circle text-xl' : 'ph-bold ph-warning-circle text-xl';
+
+            setTimeout(() => { 
+                toast.style.transform = "translate(-50%, -50px)"; 
+                toast.style.opacity = "0"; 
+            }, 4000);
+        };
+
+        // Theme colors available for cards
+        const themeColors = [
+            { label: 'Yellow', value: 'bg-[#FFEA00]' },
+            { label: 'Cyan', value: 'bg-[#00FFFF]' },
+            { label: 'Magenta', value: 'bg-[#FF00FF]' },
+            { label: 'Green', value: 'bg-[#a3e635]' },
+            { label: 'Blue', value: 'bg-[#2962ff]' },
+            { label: 'Purple', value: 'bg-[#d500f9]' },
+            { label: 'Black', value: 'bg-[#111111]' }
+        ];
+
+        // Handles Direct Image Upload to Firebase Storage
+        window.handleImageUpload = (input) => {
+            const file = input.files[0];
+            if (!file) return;
+
+            const container = input.closest('div');
+            const urlInput = container.querySelector('.row-img');
+            const icon = container.querySelector('.upload-icon');
+
+            // Set loading state
+            icon.className = "ph-bold ph-spinner animate-spin upload-icon text-lg text-doko-magenta";
+            
+            // Create a unique file name and upload to 'product_images' folder in Storage
+            const storageRef = ref(storage, `product_images/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.]/g, '')}`);
+            const uploadTask = uploadBytesResumable(storageRef, file);
+
+            uploadTask.on('state_changed',
+                (snapshot) => {
+                    const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                    urlInput.value = `Uploading ${Math.round(progress)}%...`;
+                },
+                (error) => {
+                    console.error("Upload failed", error);
+                    window.showToast("Image Upload Failed", "error");
+                    icon.className = "ph-bold ph-upload-simple upload-icon text-lg text-red-500";
+                    urlInput.value = "";
+                },
+                async () => {
+                    // Upload successful, get the direct Firebase Storage URL
+                    const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+                    urlInput.value = downloadURL; // Auto-fill the URL field
+                    icon.className = "ph-bold ph-check-circle upload-icon text-lg text-doko-green";
+                    window.showToast("Image successfully uploaded to Cloud!", "success");
+                }
+            );
+        };
+
+        window.generateRows = () => {
+            let count = parseInt(document.getElementById('row-count').value);
+            if (count < 1) count = 1;
+            if (count > 20) count = 20;
+            document.getElementById('row-count').value = count;
+
+            const container = document.getElementById('rows-container');
+            container.innerHTML = '';
+
+            for (let i = 0; i < count; i++) {
+                const randomColorHtml = themeColors.map(c => 
+                    `<option value="${c.value}" ${Math.random() > 0.8 ? 'selected' : ''}>${c.label}</option>`
+                ).join('');
+
+                const rowHtml = `
+                    <div class="product-row grid grid-cols-12 gap-3 bg-gray-50 p-2 rounded-xl brutal-border shadow-[2px_2px_0_0_#111] items-center hover:bg-doko-yellow/20 transition-colors">
+                        <div class="col-span-2">
+                            <input type="text" placeholder="PROD-00${i+1}" class="row-id w-full p-2.5 rounded-lg border-2 border-gray-300 focus:border-black outline-none font-bold text-xs uppercase" required>
+                        </div>
+                        <div class="col-span-3">
+                            <input type="text" placeholder="Product Name" class="row-name w-full p-2.5 rounded-lg border-2 border-gray-300 focus:border-black outline-none font-bold text-sm" required>
+                        </div>
+                        <div class="col-span-2">
+                            <input type="text" placeholder="Category" class="row-cat w-full p-2.5 rounded-lg border-2 border-gray-300 focus:border-black outline-none font-bold text-xs" required>
+                        </div>
+                        <div class="col-span-1">
+                            <input type="number" placeholder="₹" class="row-price w-full p-2.5 rounded-lg border-2 border-gray-300 focus:border-black outline-none font-black text-sm" required>
+                        </div>
+                        <div class="col-span-2 flex gap-1">
+                            <input type="text" placeholder="Paste Direct URL..." class="row-img w-full p-2.5 rounded-lg border-2 border-gray-300 focus:border-black outline-none font-bold text-xs text-gray-500">
+                            <label class="cursor-pointer bg-white border-2 border-gray-300 rounded-lg px-2 flex items-center justify-center hover:bg-doko-yellow hover:border-black transition-colors" title="Upload Image to Cloud">
+                                <i class="ph-bold ph-upload-simple upload-icon text-lg"></i>
+                                <input type="file" accept="image/*" class="hidden" onchange="handleImageUpload(this)">
+                            </label>
+                        </div>
+                        <div class="col-span-1">
+                            <select class="row-color w-full p-2.5 rounded-lg border-2 border-gray-300 focus:border-black outline-none font-bold text-xs cursor-pointer">
+                                ${randomColorHtml}
+                            </select>
+                        </div>
+                        <div class="col-span-1 flex justify-center">
+                            <input type="checkbox" class="row-stock w-6 h-6 accent-doko-magenta cursor-pointer border-2 border-black" checked>
+                        </div>
+                    </div>
+                `;
+                container.insertAdjacentHTML('beforeend', rowHtml);
+            }
+        };
+
+        window.uploadToFirebase = async () => {
+            const rows = document.querySelectorAll('.product-row');
+            const btn = document.getElementById('upload-btn');
+            const status = document.getElementById('status-text');
+            const productsToUpload = [];
+
+            // 1. Gather and Validate Data
+            for (let i = 0; i < rows.length; i++) {
+                const row = rows[i];
+                const id = row.querySelector('.row-id').value.trim();
+                const name = row.querySelector('.row-name').value.trim();
+                const category = row.querySelector('.row-cat').value.trim();
+                const price = parseFloat(row.querySelector('.row-price').value);
+                const image = row.querySelector('.row-img').value.trim();
+                const color = row.querySelector('.row-color').value;
+                const isAvailable = row.querySelector('.row-stock').checked;
+
+                // Basic validation: skip empty rows, but alert if partially filled
+                if (id && name && category && !isNaN(price)) {
+                    productsToUpload.push({
+                        id: id,
+                        name: name,
+                        category: category,
+                        price: price,
+                        image: image || `https://placehold.co/300x300/e2e8f0/111111?text=${name.replace(/ /g, '+')}`,
+                        color: color,
+                        isAvailable: isAvailable
+                    });
+                } else if (id || name || category || !isNaN(price)) {
+                    showToast(`Row ${i+1} is missing required fields!`, 'error');
+                    return;
+                }
+            }
+
+            if (productsToUpload.length === 0) {
+                showToast("Please fill in at least one valid product.", "error");
+                return;
+            }
+
+            // 2. Upload to Firebase
+            btn.disabled = true;
+            btn.innerHTML = `<i class="ph-bold ph-spinner animate-spin text-2xl"></i> Uploading...`;
+            status.textContent = `Pushing ${productsToUpload.length} items to database...`;
+
+            try {
+                // Using Promise.all to upload all documents simultaneously
+                await Promise.all(productsToUpload.map(product => {
+                    return setDoc(doc(db, "products", product.id), product);
+                }));
+
+                showToast(`Successfully uploaded ${productsToUpload.length} products!`, 'success');
+                status.textContent = `Upload complete. Ready for more.`;
+                
+                // Optional: Clear rows after success
+                document.getElementById('rows-container').innerHTML = '';
+                document.getElementById('row-count').value = 1;
+                generateRows();
+
+            } catch (error) {
+                console.error("Upload error:", error);
+                showToast("Error uploading products to database.", "error");
+                status.textContent = "Upload failed. Check console.";
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = `<i class="ph-bold ph-cloud-arrow-up text-2xl"></i> Upload All to Database`;
+            }
+        };
+
+        // Initialize with default 5 rows
+        generateRows();
+    </script>
+</body>
+</html>
