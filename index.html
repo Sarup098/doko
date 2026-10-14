@@ -379,10 +379,7 @@
 
         // Firebase Listeners
         const setupFirebaseListeners = () => {
-            document.getElementById('db-status-text').innerText = "Connected to Firestore ✅";
-            document.getElementById('db-status-text').classList.remove('animate-pulse');
-            document.getElementById('db-status-text').classList.add('text-doko-green');
-            
+            // Listeners for Products
             onSnapshot(collection(db, "products"), (snapshot) => {
                 if (snapshot.empty) {
                     SEED_PRODUCTS.forEach(async (p) => { await setDoc(doc(db, "products", p.id), p); });
@@ -390,8 +387,15 @@
                     globalProducts = snapshot.docs.map(doc => ({ ...doc.data(), docId: doc.id }));
                     if(currentView === 'shop') renderShop();
                 }
-            }, (error) => console.error(error));
+            }, (error) => {
+                console.error("Firebase Read Error:", error);
+                if(error.code === 'permission-denied') {
+                    document.getElementById('shop-grid').innerHTML = `<div class="col-span-full text-center py-12 brutal-card"><p class="font-black text-xl text-red-500 uppercase">Database Blocked 🛑</p><p class="text-sm mt-2 text-gray-500 font-bold">Please update your Firestore Security Rules.</p></div>`;
+                    window.showToast("Database Permission Denied", "error");
+                }
+            });
 
+            // Listeners for Orders
             onSnapshot(collection(db, "orders"), (snapshot) => {
                 // Keep all orders in memory to sort properly
                 globalOrders = snapshot.docs.map(doc => ({ ...doc.data(), docId: doc.id }))
@@ -420,13 +424,21 @@
         window.setCategory = (cat) => { currentCategory = cat; renderShop(); };
 
         function renderShop() {
-            const categories = ['All', ...new Set(globalProducts.map(p => p.category))];
+            // Safely map categories in case some products are missing them
+            const categories = ['All', ...new Set(globalProducts.map(p => p.category || 'Uncategorized'))];
             document.getElementById('category-filters').innerHTML = categories.map(cat => {
                 const active = cat === currentCategory;
                 return `<button onclick="setCategory('${cat}')" class="px-4 py-1.5 md:py-2 rounded-lg font-black uppercase text-[10px] md:text-xs tracking-widest whitespace-nowrap brutal-border shadow-[2px_2px_0_0_#111] transition-colors ${active ? 'bg-doko-black text-doko-yellow' : 'bg-white hover:bg-gray-100'}">${cat}</button>`;
             }).join('');
 
-            const filtered = globalProducts.filter(p => (currentCategory === 'All' || p.category === currentCategory) && p.name.toLowerCase().includes(currentSearch));
+            // Bulletproof filter to prevent crashes from missing data fields
+            const filtered = globalProducts.filter(p => {
+                const matchCat = currentCategory === 'All' || p.category === currentCategory;
+                const safeName = p.name || 'Unnamed Product';
+                const matchSearch = safeName.toLowerCase().includes(currentSearch);
+                return matchCat && matchSearch;
+            });
+            
             const grid = document.getElementById('shop-grid');
             
             if(filtered.length === 0) {
@@ -434,21 +446,28 @@
                 return;
             }
 
-            grid.innerHTML = filtered.map(p => `
+            grid.innerHTML = filtered.map(p => {
+                const safeName = p.name || 'Unnamed Product';
+                const safePrice = p.price || 0;
+                const safeImage = p.image || 'https://placehold.co/300x300/e2e8f0/111111?text=No+Image';
+                const safeColor = p.color || 'bg-gray-200';
+                
+                return `
                 <div class="brutal-card flex flex-col group relative ${!p.isAvailable ? 'opacity-60 grayscale' : ''}">
-                    <div class="h-28 md:h-40 w-full ${p.color} relative border-b-2 border-black overflow-hidden shrink-0">
-                        <img src="${p.image}" class="w-full h-full object-cover group-hover:scale-105 transition-transform">
-                        <div class="absolute top-2 right-2 bg-white px-2 py-1 rounded-md text-xs font-black brutal-border shadow-[2px_2px_0_0_#111] rotate-2">₹${p.price}</div>
+                    <div class="h-28 md:h-40 w-full ${safeColor} relative border-b-2 border-black overflow-hidden shrink-0">
+                        <img src="${safeImage}" class="w-full h-full object-cover group-hover:scale-105 transition-transform" onerror="this.src='https://placehold.co/300x300/e2e8f0/111111?text=Error'">
+                        <div class="absolute top-2 right-2 bg-white px-2 py-1 rounded-md text-xs font-black brutal-border shadow-[2px_2px_0_0_#111] rotate-2">₹${safePrice}</div>
                     </div>
                     <div class="p-3 md:p-4 flex flex-col flex-grow">
-                        <span class="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 line-clamp-1">${p.category}</span>
-                        <h3 class="font-display text-sm md:text-lg font-black leading-tight mb-2 text-black line-clamp-2">${p.name}</h3>
+                        <span class="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 line-clamp-1">${p.category || 'Uncategorized'}</span>
+                        <h3 class="font-display text-sm md:text-lg font-black leading-tight mb-2 text-black line-clamp-2">${safeName}</h3>
                         <div class="mt-auto pt-2">
                             ${p.isAvailable ? `<button onclick="addToCart('${p.id}')" class="brutal-btn w-full py-2 bg-doko-black text-white text-[10px] md:text-xs flex justify-center items-center gap-1"><i class="ph-bold ph-plus"></i> Add</button>` : `<div class="w-full text-center py-2 rounded-lg font-black uppercase text-[10px] bg-gray-100 text-gray-400 brutal-border border-gray-300">Out</div>`}
                         </div>
                     </div>
                 </div>
-            `).join('');
+                `;
+            }).join('');
         }
 
         window.addToCart = (pid) => {
